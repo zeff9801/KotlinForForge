@@ -23,10 +23,10 @@ import java.util.function.Consumer
  * The Kotlin for Forge `ModContainer`.
  */
 public class KotlinModContainer(
-        private val info: IModInfo,
-        private val className: String,
-        private val classLoader: ClassLoader,
-        private val scanData: ModFileScanData,
+    private val info: IModInfo,
+    private val className: String,
+    private val classLoader: ClassLoader,
+    private val scanResults: ModFileScanData,
 ) : ModContainer(info) {
 
     /**
@@ -91,26 +91,26 @@ public class KotlinModContainer(
 
         try {
             modClass = Class.forName(className, false, classLoader)
-            LOGGER.debug(Logging.LOADING, "Loaded kotlin modclass ${modClass.name} with ${modClass.classLoader}")
+            LOGGER.trace(Logging.LOADING, "Loaded kotlin modclass ${modClass.name} with ${modClass.classLoader}")
         } catch (throwable: Throwable) {
             LOGGER.error(Logging.LOADING, "Failed to load kotlin class $className", throwable)
             throw ModLoadingException(info, ModLoadingStage.CONSTRUCT, "fml.modloading.failedtoloadmodclass", throwable)
         }
 
         try {
-            LOGGER.debug(Logging.LOADING, "Loading mod instance ${getModId()} of type ${modClass.name}")
+            LOGGER.trace(Logging.LOADING, "Loading mod instance ${getModId()} of type ${modClass.name}")
             modInstance = modClass.kotlin.objectInstance ?: modClass.getDeclaredConstructor().newInstance()
-            LOGGER.debug(Logging.LOADING, "Loaded mod instance ${getModId()} of type ${modClass.name}")
+            LOGGER.trace(Logging.LOADING, "Loaded mod instance ${getModId()} of type ${modClass.name}")
         } catch (throwable: Throwable) {
             LOGGER.error(Logging.LOADING, "Failed to create mod instance. ModID: ${getModId()}, class ${modClass.name}", throwable)
             throw ModLoadingException(modInfo, ModLoadingStage.CONSTRUCT, "fml.modloading.failedtoloadmod", throwable, modClass)
         }
 
         try {
-            LOGGER.debug(Logging.LOADING, "Injecting Automatic Kotlin event subscribers for ${getModId()}")
+            LOGGER.trace(Logging.LOADING, "Injecting Automatic Kotlin event subscribers for ${getModId()}")
             // Inject into object EventBusSubscribers
-            AutoKotlinEventBusSubscriber.inject(this, scanData, modClass.classLoader)
-            LOGGER.debug(Logging.LOADING, "Completed Automatic Kotlin event subscribers for ${getModId()}")
+            AutoKotlinEventBusSubscriber.inject(this, scanResults, modClass.classLoader)
+            LOGGER.trace(Logging.LOADING, "Completed Automatic Kotlin event subscribers for ${getModId()}")
         } catch (throwable: Throwable) {
             LOGGER.error(Logging.LOADING, "Failed to register Automatic Kotlin subscribers. ModID: ${getModId()}, class ${modClass.name}", throwable)
             throw ModLoadingException(modInfo, ModLoadingStage.CONSTRUCT, "fml.modloading.failedtoloadmod", throwable, modClass)
@@ -125,13 +125,13 @@ public class KotlinModContainer(
         return mod == modInstance
     }
 
-    override fun getMod(): Any = modInstance
+    override fun getMod(): Any? = modInstance
 
     public override fun <T> acceptEvent(e: T) where T : Event, T : IModBusEvent {
         try {
-            LOGGER.debug("Firing event for modid $modId : $e")
+            LOGGER.trace("Firing event for modid $modId : $e")
             eventBus.post(e)
-            LOGGER.debug("Fired event for modid $modId : $e")
+            LOGGER.trace("Fired event for modid $modId : $e")
         } catch (t: Throwable) {
             LOGGER.error("Caught exception during event $e dispatch for modid $modId", t)
             throw ModLoadingException(modInfo, modLoadingStage, "fml.modloading.errorduringevent", t)
